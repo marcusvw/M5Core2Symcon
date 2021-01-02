@@ -26,4 +26,5 @@ public:
     void deActivate();
     void draw();
     void handleInput();
+    void middleButtonPushed();
 };

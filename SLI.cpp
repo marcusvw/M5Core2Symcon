@@ -34,6 +34,12 @@ void SliderPage::draw()
         M5.Lcd.drawFastHLine(SLIDER_X + 5, (SLIDER_Y + 200) - (z * 2 + 1), (SLIDER_WIDTH - 10), BLACK);
     }
 }
+void SliderPage::middleButtonPushed()
+{
+    JsonRPC::execute_boolean("RequestAction", itemId + ",0");
+    state=0;
+    draw();
+}
 void SliderPage::handleInput()
 {
     char cstr[16];
@@ -43,10 +49,9 @@ void SliderPage::handleInput()
         int32_t pos = getSliderPos();
         if (pos >= 0)
         {
+            state = pos;
             draw();
             sliderActive = true;
-            state = pos;
-            //int32_t dif = sliderLastSendValue - state;
             if ((millis() - lastUpdate) > 500)
             {
 
@@ -54,7 +59,7 @@ void SliderPage::handleInput()
                 int val = (int)(factor * (float)state);
                 JsonRPC::execute_boolean("RequestAction", itemId + "," + val);
                 sliderLastSendValue = state;
-                lastUpdate=millis();
+                lastUpdate = millis();
             }
         }
         else
@@ -68,18 +73,21 @@ void SliderPage::handleInput()
                 sliderLastSendValue = -11;
                 state = -11;
                 sliderActive = false;
-                lastUpdate=millis();
+                lastUpdate = millis();
             }
             else
             {
                 if ((millis() - lastUpdate) > 500)
                 {
-                    lastUpdate=millis();
+                    lastUpdate = millis();
                     uint32_t uVal = JsonRPC::execute_int("GetValue", String(itemId));
-                    int32_t sVal = (int32_t)(((float)(uVal)) / factor);
-                    Serial.println("SLI INF Slider Value changed by server");
-                    state = sVal;
-                    draw();
+                    if (JsonRPC::checkStatus())
+                    {
+                        int32_t sVal = (int32_t)(((float)(uVal)) / factor);
+                        Serial.println("SLI INF Slider Value changed by server");
+                        state = sVal;
+                        draw();
+                    }
                 }
             }
         }

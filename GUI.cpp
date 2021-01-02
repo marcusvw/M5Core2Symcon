@@ -9,6 +9,10 @@ static uint8_t currentPage = 0;
 static bool t1 = false;
 static bool t2 = false;
 static bool t3 = false;
+static uint32_t lastActive = 0;
+
+bool checkSleep = false;
+static uint32_t sleepTimeout = SLEEP_TIMEOUT_LONG;
 void GUI_Init()
 {
     String config = JsonRPC::init();
@@ -42,7 +46,34 @@ void GUI_Init()
 
 void GUI_Loop()
 {
-    GUI__checkButtons();
+    if (GUI__checkButtons())
+    {
+        lastActive = millis();
+
+        sleepTimeout = SLEEP_TIMEOUT_LONG;
+        if (checkSleep)
+        {
+            Serial.println("GUI INF Fully wake up");
+            M5.Axp.RestoreFromLightSleep();
+            //M5.Lcd.setBrightness(200);
+            M5.lcd.wakeup();
+            checkSleep=false;
+        }
+    }
+    if ((millis() - lastActive) > sleepTimeout)
+    {
+        Serial.println("GUI INF Timeout reached going to sleep");
+        M5.lcd.sleep();
+        //M5.Lcd.setBrightness(0);
+        M5.Axp.PrepareToSleep();
+        esp_sleep_enable_timer_wakeup(500000);
+        esp_light_sleep_start();
+        Serial.println("GUI INF Check for touch event, when nothing happend then sleep again");
+        lastActive = millis();
+        sleepTimeout = SLEEP_TIMEOUT_SHORT;
+        checkSleep = true;
+    }
+
     pages[currentPage]->handleInput();
 }
 
@@ -56,71 +87,78 @@ bool GUI__isInArea(int xT, int yT, int x, int y, int sizeX, int sizeY)
     return (retVal);
 }
 
-void GUI__checkButtons()
+bool GUI__checkButtons()
 {
+    bool touchActive = false;
     TouchPoint_t pos = M5.Touch.getPressPoint();
-    if (GUI__isInArea(pos.x, pos.y, T1_X, T1_Y, SIZE_X, SIZE_Y))
+    touchActive = (pos.x != -1);
+    if (touchActive)
     {
-        if (t1 == false)
+        if (GUI__isInArea(pos.x, pos.y, T1_X, T1_Y, SIZE_X, SIZE_Y))
         {
-            t1 = true;
-            pages[currentPage]->deActivate();
-
-            if (currentPage == 0)
+            if (t1 == false)
             {
-                currentPage = pageCount - 1;
+                t1 = true;
+                pages[currentPage]->deActivate();
+
+                if (currentPage == 0)
+                {
+                    currentPage = pageCount - 1;
+                }
+                else
+                {
+                    currentPage--;
+                }
+
+                pages[currentPage]->activate();
             }
-            else
+        }
+        else
+        {
+            if (t1 == true)
             {
-                currentPage--;
+                t1 = false;
             }
-
-            pages[currentPage]->activate();
         }
-    }
-    else
-    {
-        if (t1 == true)
-        {
-            t1 = false;
-        }
-    }
 
-    if (GUI__isInArea(pos.x, pos.y, T2_X, T2_Y, SIZE_X, SIZE_Y))
-    {
-        if (t2 == false)
+        if (GUI__isInArea(pos.x, pos.y, T2_X, T2_Y, SIZE_X, SIZE_Y))
         {
-            t2 = true;
-        }
-    }
-    else
-    {
-        if (t2 == true)
-        {
-            t2 = false;
-        }
-    }
-
-    if (GUI__isInArea(pos.x, pos.y, T3_X, T3_Y, SIZE_X, SIZE_Y))
-    {
-        if (t3 == false)
-        {
-            t3 = true;
-
-            pages[currentPage]->deActivate();
-            currentPage++;
-            if (currentPage >= pageCount)
+            if (t2 == false)
             {
-                currentPage = 0;
+                t2 = true;
+                pages[currentPage]->middleButtonPushed();
             }
-            pages[currentPage]->activate();
         }
-    }
-    else
-    {
-        if (t3 == true)
+        else
         {
-            t3 = false;
+            if (t2 == true)
+            {
+                t2 = false;
+            }
+        }
+
+        if (GUI__isInArea(pos.x, pos.y, T3_X, T3_Y, SIZE_X, SIZE_Y))
+        {
+            if (t3 == false)
+            {
+                t3 = true;
+
+                pages[currentPage]->deActivate();
+                currentPage++;
+                if (currentPage >= pageCount)
+                {
+                    currentPage = 0;
+                }
+                pages[currentPage]->activate();
+            }
+        }
+        else
+        {
+            if (t3 == true)
+            {
+                t3 = false;
+            }
         }
     }
+    return (touchActive);
 }

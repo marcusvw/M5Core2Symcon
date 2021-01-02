@@ -7,5 +7,6 @@ class Page
     virtual void activate();
     virtual void deActivate();
     virtual void draw();
-    virtual void handleInput();     
+    virtual void handleInput();
+    virtual void middleButtonPushed();     
 };
