@@ -65,7 +65,7 @@ void setup()
     if(type="SLI")
     {
       Serial.printf("M2I SLI Config: %s %s %s\r\n",doc["elements"][x]["image"].as<String>().c_str(), doc["elements"][x]["int"].as<String>().c_str(), doc["elements"][x]["out"].as<String>().c_str());
-       sp[pages]=new SliderPage(doc["elements"][x]["image"].as<String>(), doc["elements"][x]["int"].as<String>(), doc["elements"][x]["out"].as<String>());
+       sp[pages] = new SliderPage(doc["elements"][x]["image"].as<String>(), doc["elements"][x]["int"].as<String>(), doc["elements"][x]["out"].as<String>());
        pages++;
     }
   }
