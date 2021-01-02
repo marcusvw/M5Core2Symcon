@@ -1,0 +1,6 @@
+{
+    "sketch": "M5Core2Symcon.ino",
+    "board": "m5stack:esp32:m5stack-core2",
+    "configuration": "PSRAM=disabled,PartitionScheme=default,CPUFreq=240,UploadSpeed=921600,DebugLevel=warn",
+    "port": "COM5"
+}
