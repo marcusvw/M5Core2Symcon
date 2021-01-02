@@ -1,12 +1,11 @@
 #include "SLI.h"
-#include "MQT.h"
 #include <M5Core2.h>
-SliderPage::SliderPage(String paramImage, String paramInTopic, String paramOutTopic)
+#include <ArduinoJson.h>
+SliderPage::SliderPage(String paramImage, String paramItemId, float paramFactor)
 {
     image = paramImage;
-    inTopic = paramInTopic;
-    outTopic = paramOutTopic;
-    MQT_Subscribe(paramInTopic.c_str());
+    itemId = paramItemId;
+    factor = paramFactor;
 }
 
 void SliderPage::activate()
@@ -45,34 +44,39 @@ void SliderPage::handleInput()
         if (pos >= 0)
         {
             draw();
-            sliderActive=true;
+            sliderActive = true;
             state = pos;
-            int32_t dif = sliderLastSendValue - state;
-            if ((dif > 10) || (dif < -10))
+            //int32_t dif = sliderLastSendValue - state;
+            if ((millis() - lastUpdate) > 500)
             {
+
                 itoa(state, cstr, 10);
-                MQT_publish(outTopic.c_str(), cstr);
+                int val = (int)(factor * (float)state);
+                JsonRPC::execute_boolean("RequestAction", itemId + "," + val);
                 sliderLastSendValue = state;
+                lastUpdate=millis();
             }
         }
         else
         {
             /* code */
-            if(sliderActive)
+            if (sliderActive)
             {
                 itoa(state, cstr, 10);
-                MQT_publish(outTopic.c_str(), cstr);
+                int val = (int)(factor * (float)state);
+                JsonRPC::execute_boolean("RequestAction", itemId + "," + val);
                 sliderLastSendValue = -11;
-                state=-11;  
-                sliderActive=false; 
+                state = -11;
+                sliderActive = false;
+                lastUpdate=millis();
             }
-            String msg = MQT_getPayload(inTopic);
-            if (msg.length() != 0)
+            else
             {
-                
-                int32_t sVal = atoi(msg.c_str());
-                if (sVal != state)
+                if ((millis() - lastUpdate) > 500)
                 {
+                    lastUpdate=millis();
+                    uint32_t uVal = JsonRPC::execute_int("GetValue", String(itemId));
+                    int32_t sVal = (int32_t)(((float)(uVal)) / factor);
                     Serial.println("SLI INF Slider Value changed by server");
                     state = sVal;
                     draw();

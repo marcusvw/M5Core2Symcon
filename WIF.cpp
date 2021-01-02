@@ -31,7 +31,6 @@ void WIF_resetConfig()
 void WIF_init()
 {
     bool isConfigured;
-    Serial.setTimeout(20000);
     Serial.println(F("WIF INF Reading Config"));
     /*Open Prereferences memory in read/write mode*/
     WIF__preferences.begin(WIF_PRE_DIR, false);
@@ -63,6 +62,7 @@ void WIF_init()
 }
 void WIF__enterConfig()
 {
+    Serial.setTimeout(200000);
     WIF__scanWifiNetworks();
     WIF__getPSK();
     WIF__preferences.putString(WIF_PRE_KEY_PSK, WIF__wifiPSK);

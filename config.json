@@ -1,10 +1,1 @@
-{
-    "elements":[
-        {
-            "type":"SLI",
-            "int":"/wz/light/dim",
-            "out":"/RFIDTERM/WZDIMSET",
-            "image":"/LON.bmp"
-        }
-    ]
-}
+{   "elements": [     { "type": "SLI", "id": "23061", "factor": 2.5, "image": "/LON.bmp" },     { "type": "SLI", "id": "55865", "factor": 2.5, "image": "/LOFF.bmp" }   ] }
