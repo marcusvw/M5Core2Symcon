@@ -6,9 +6,10 @@ ArduinoJson
 
 #Config
 ## Symcon
-<code>
 Create a json Config in a string variable in Symcon.
 Sample:
+;;;
+
 {
     "version": 2, // Config Version 
     "sleepTimeout": 15000, // Sleep timer
@@ -48,7 +49,7 @@ Sample:
         }
     ]
 }
-</code>
+;;;
 ## Config of M5Core2
 Load, compile and download the sketch to the M5Core2.
 The Serial if doesn't give local echo.
