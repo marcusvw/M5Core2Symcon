@@ -141,7 +141,6 @@ void SliderPage::handleInput()
             * **/
             if (sliderActive)
             {
-                itoa(state, cstr, 10);
                 int val = (int)(factor * (float)state);
                 JsonRPC::execute_boolean("RequestAction", itemId + "," + val);
                 sliderLastSendValue = -11;
