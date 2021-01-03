@@ -4,7 +4,7 @@ Adurino Project using an MCore2 as Front End with IP Symcon
 HTTPClient
 ArduinoJson
 
-#Config
+# Config
 ## Symcon
 Create a json Config in a string variable in Symcon.
 Sample:
