@@ -1,32 +1,53 @@
 #include "SLI.h"
 #include <M5Core2.h>
 #include <ArduinoJson.h>
-SliderPage::SliderPage(String paramImage, String paramItemId, float paramFactor)
+#include "GUI.h"
+SliderPage::SliderPage(JsonObject obj)
 {
-    image = paramImage;
-    itemId = paramItemId;
-    factor = paramFactor;
+    image1 = obj["image1"].as<String>();
+    image2 = obj["image2"].as<String>();
+    itemId = obj["id"].as<String>();
+    header = obj["head"].as<String>();
+    factor = obj["factor"].as<float>();
+    GUI_CheckImage(image1);
+    GUI_CheckImage(image2);
 }
 
 void SliderPage::activate()
 {
     active = true;
     M5.Lcd.fillScreen(BLACK);
+    Serial.printf("SLI INF Drawing Side and imgs\r\n");
     M5.Lcd.drawFastVLine(SLIDER_X, SLIDER_Y, SLIDER_HEIGHT, WHITE);
     M5.Lcd.drawFastVLine(SLIDER_X + SLIDER_WIDTH, SLIDER_Y, SLIDER_HEIGHT, WHITE);
-    M5.Lcd.drawBmpFile(SD, image.c_str(), 10, 60);
+    M5.Lcd.drawBmpFile(SD, image1.c_str(), IMG_POS1_X, IMG_POS1_Y);
+    M5.Lcd.drawBmpFile(SD, image2.c_str(), IMG_POS2_X, IMG_POS2_Y);
+    Serial.printf("SLI INF Update Slider n\r\n");
+    handleInput();
+    draw();
 }
 void SliderPage::deActivate()
 {
     active = false;
+}
+
+String SliderPage::getHeader()
+{
+    return (header);
 }
 void SliderPage::draw()
 {
     uint32_t z = 0;
     for (z = 0; z < state; z++)
     {
-        M5.Lcd.drawFastHLine(SLIDER_X + 5, (SLIDER_Y + 200) - (z * 2), (SLIDER_WIDTH - 10), WHITE);
-        M5.Lcd.drawFastHLine(SLIDER_X + 5, (SLIDER_Y + 200) - (z * 2 + 1), (SLIDER_WIDTH - 10), BLACK);
+        uint16_t color = 0;
+        if (state > 189)
+        {
+            color = WHITE;
+        }
+        color = ((state / 6) << 11) | ((state / 3) << 5 | (state / 6));
+        M5.Lcd.drawFastHLine(SLIDER_X + 5, (SLIDER_Y + 200) - (z * 2), (SLIDER_WIDTH - 10), color);
+        M5.Lcd.drawFastHLine(SLIDER_X + 5, (SLIDER_Y + 200) - (z * 2 + 1), (SLIDER_WIDTH - 10), color);
     }
     for (z = state; z < 100; z++)
     {
@@ -37,7 +58,7 @@ void SliderPage::draw()
 void SliderPage::middleButtonPushed()
 {
     JsonRPC::execute_boolean("RequestAction", itemId + ",0");
-    state=0;
+    state = 0;
     draw();
 }
 void SliderPage::handleInput()
@@ -84,9 +105,12 @@ void SliderPage::handleInput()
                     if (JsonRPC::checkStatus())
                     {
                         int32_t sVal = (int32_t)(((float)(uVal)) / factor);
-                        Serial.println("SLI INF Slider Value changed by server");
-                        state = sVal;
-                        draw();
+                        if (sVal != state)
+                        {
+                            Serial.printf("SLI INF Slider Value changed by server %d", sVal);
+                            state = sVal;
+                            draw();
+                        }
                     }
                 }
             }

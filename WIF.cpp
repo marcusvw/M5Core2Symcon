@@ -45,19 +45,18 @@ void WIF_init()
     {
         WIF__preferences.getString(WIF_PRE_KEY_PSK, WIF__wifiPSK, WIF__PSK_BUFFER_SIZE);
         WIF__preferences.getString(WIF_PRE_KEY_SSID, WIF__wifiSSID, WIF__SSID_BUFFER_SIZE);
-        if(WIF__connectWifi())
+        if (WIF__connectWifi())
         {
             Serial.println(F("WIF INF WIFI Succesfully Connected"));
             Serial.print("WIF INF M5 IP: ");
             Serial.println(WiFi.localIP());
-            M5.Lcd.printf("WIFI IP:%s\r\n",WiFi.localIP().toString().c_str());
+            M5.Lcd.printf("WIFI IP:%s\r\n", WiFi.localIP().toString().c_str());
         }
         else
         {
             Serial.println(F("WIF INF WIFI Not connected"));
             M5.Lcd.print("WIFI not connected");
         }
-        
     }
 }
 void WIF__enterConfig()
@@ -98,6 +97,23 @@ bool WIF__connectWifi()
     bool retVal = true;
     uint64_t startTime = millis();
     WiFi.begin(WIF__wifiSSID, WIF__wifiPSK);
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        if (millis() - startTime > WIF__WIFI_TIMEOUT)
+        {
+            WiFi.disconnect(true, true);
+            retVal = false;
+            break;
+        }
+    }
+    return (retVal);
+}
+bool WIF_waitForReconnect()
+{
+    bool retVal = true;
+    WiFi.reconnect();
+    uint64_t startTime = millis();
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
@@ -151,7 +167,7 @@ void WIF__scanWifiNetworks()
             {
                 ssidsArray[clientWifiSsidId].toCharArray(WIF__wifiSSID, WIF__SSID_BUFFER_SIZE);
                 Serial.println(F("WIF INF Network Selected"));
-                Serial.println("WIF INF "+ssidsArray[clientWifiSsidId]);
+                Serial.println("WIF INF " + ssidsArray[clientWifiSsidId]);
                 break;
             }
         }

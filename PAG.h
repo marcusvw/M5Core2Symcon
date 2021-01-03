@@ -1,4 +1,5 @@
 #pragma once
+#include <M5Core2.h>
 class Page
 {
     protected:
@@ -8,5 +9,7 @@ class Page
     virtual void deActivate();
     virtual void draw();
     virtual void handleInput();
-    virtual void middleButtonPushed();     
+    virtual void middleButtonPushed();
+    virtual String getHeader();
+         
 };

@@ -139,7 +139,7 @@ String JsonRPC::execute_string(String method, String parameters)
         if (jsonPayload.length() != 0)
         {
             Serial.println("RPC INF JSON Interpretation");
-            StaticJsonDocument<1024> doc;
+             DynamicJsonDocument doc(20000);
             DeserializationError error = deserializeJson(doc, jsonPayload);
 
             if (error)

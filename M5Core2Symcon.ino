@@ -22,6 +22,8 @@ void setup()
   M5.Lcd.print("Booting\r\n");
   Serial.setTimeout(2000);
   Serial.flush();
+  //struct	rst_info	*rtc_info=system_get_rst_info();
+
   Serial.println("Reset?(y)");
   String res = Serial.readString();
   res.trim();
