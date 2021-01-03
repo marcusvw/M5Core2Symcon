@@ -21,48 +21,60 @@
 static char WIF__wifiSSID[WIF__SSID_BUFFER_SIZE];
 static char WIF__wifiPSK[WIF__PSK_BUFFER_SIZE];
 Preferences WIF__preferences;
-
+/**
+ * Clear Config for reconfiguration
+ ***/
 void WIF_resetConfig()
 {
     WIF__preferences.begin(WIF_PRE_DIR, false);
     WIF__preferences.clear();
     WIF__preferences.end();
 }
+
+/***
+ * Init WIFI
+ ***/
 void WIF_init()
 {
     bool isConfigured;
-    Serial.setTimeout(20000);
     Serial.println(F("WIF INF Reading Config"));
     /*Open Prereferences memory in read/write mode*/
     WIF__preferences.begin(WIF_PRE_DIR, false);
     isConfigured = WIF__preferences.getBool(WIF_PRE_KEY_IS_CONFIGURED, false);
+    /** If not configured, request config via serial from user*/
     if (!isConfigured)
     {
         Serial.println("WIF INF No valid config found");
         M5.Lcd.print("Config failed, check serial\r\n");
         WIF__enterConfig();
     }
+    /**Config valid, load it from NV Memory**/
     else
     {
         WIF__preferences.getString(WIF_PRE_KEY_PSK, WIF__wifiPSK, WIF__PSK_BUFFER_SIZE);
         WIF__preferences.getString(WIF_PRE_KEY_SSID, WIF__wifiSSID, WIF__SSID_BUFFER_SIZE);
-        if(WIF__connectWifi())
+        /**Try connection**/
+        if (WIF__connectWifi())
         {
             Serial.println(F("WIF INF WIFI Succesfully Connected"));
             Serial.print("WIF INF M5 IP: ");
             Serial.println(WiFi.localIP());
-            M5.Lcd.printf("WIFI IP:%s\r\n",WiFi.localIP().toString().c_str());
+            M5.Lcd.printf("WIFI IP:%s\r\n", WiFi.localIP().toString().c_str());
         }
         else
         {
             Serial.println(F("WIF INF WIFI Not connected"));
             M5.Lcd.print("WIFI not connected");
         }
-        
     }
 }
+
+/**
+ * Request Configuration from user (serial)
+ **/
 void WIF__enterConfig()
 {
+    Serial.setTimeout(200000);
     WIF__scanWifiNetworks();
     WIF__getPSK();
     WIF__preferences.putString(WIF_PRE_KEY_PSK, WIF__wifiPSK);
@@ -70,6 +82,9 @@ void WIF__enterConfig()
     WIF__preferences.putBool(WIF_PRE_KEY_IS_CONFIGURED, true);
 }
 
+/**
+ * Get PSK from user and try to connect
+ ***/
 void WIF__getPSK()
 {
     while (1)
@@ -79,6 +94,7 @@ void WIF__getPSK()
         psk.trim();
         psk.toCharArray(WIF__wifiPSK, WIF__PSK_BUFFER_SIZE);
         Serial.println(psk);
+        /** Only leave function in case of sucesfull connection**/
         if (WIF__connectWifi())
         {
             Serial.println(F("WIF COK WIFI Succesfully Connected"));
@@ -93,11 +109,36 @@ void WIF__getPSK()
     }
 }
 
+/**
+ * Connects to WIFI
+ ***/
 bool WIF__connectWifi()
 {
     bool retVal = true;
     uint64_t startTime = millis();
+    /** Start WIFI with SSID and PSK**/
     WiFi.begin(WIF__wifiSSID, WIF__wifiPSK);
+    /**Check if wifi connection can be established before timeout**/
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        if (millis() - startTime > WIF__WIFI_TIMEOUT)
+        {
+            WiFi.disconnect(true, true);
+            retVal = false;
+            break;
+        }
+    }
+    return (retVal);
+}
+/**
+ * Force reconnect after light sleep
+ ***/
+bool WIF_waitForReconnect()
+{
+    bool retVal = true;
+    WiFi.reconnect();
+    uint64_t startTime = millis();
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
@@ -111,6 +152,9 @@ bool WIF__connectWifi()
     return (retVal);
 }
 
+/***
+ * Function to select SSID through serial
+ ***/
 void WIF__scanWifiNetworks()
 {
     String ssidsArray[50];
@@ -151,7 +195,7 @@ void WIF__scanWifiNetworks()
             {
                 ssidsArray[clientWifiSsidId].toCharArray(WIF__wifiSSID, WIF__SSID_BUFFER_SIZE);
                 Serial.println(F("WIF INF Network Selected"));
-                Serial.println("WIF INF "+ssidsArray[clientWifiSsidId]);
+                Serial.println("WIF INF " + ssidsArray[clientWifiSsidId]);
                 break;
             }
         }

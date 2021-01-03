@@ -5,6 +5,7 @@ void WIF__enterConfig();
 bool WIF__connectWifi();
 void WIF__scanWifiNetworks();
 void WIF_resetConfig();
+bool WIF_waitForReconnect();
 /***********************************************
  * Define Area
  * ************************************************/
