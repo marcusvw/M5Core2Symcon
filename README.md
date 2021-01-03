@@ -17,7 +17,7 @@ Sample:
         {
             "type": "SLI", //Type is slider
             "head": "Wohnzimmer Licht", // Header shown on top of the screen
-            "id": "23061",              // Variable to be chaned (int)
+            "id": "23061",              // Variable to be chaned (int), in this case the brightness of a hue lamp (0..254)
             "factor": 2.5,              // Scaling factor 0-100 --> 0..250
             "image2": "/living.bmp",    // First image 96x96
             "image1": "/lon.bmp"        // Second image 96x96
