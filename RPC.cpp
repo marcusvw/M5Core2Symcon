@@ -3,8 +3,12 @@
 #include "RPC.h"
 #include <ArduinoJson.h>
 
-HTTPClient JsonRPC::http;
 
+/****
+ * Init/instatiations of static members
+ * Thw whole class is static
+ *****/
+HTTPClient JsonRPC::http;
 Preferences JsonRPC::preferences;
 String JsonRPC::jsonPayload="";
 bool JsonRPC::lastStatus=true;
@@ -13,23 +17,48 @@ char JsonRPC::password[]="";
 char JsonRPC::user[]="";
 uint32_t JsonRPC::cId;
 bool JsonRPC::isConfigured;
+
+
+/***
+ * Init function check if config is available, if not config via
+ * serial is requested
+ ****/
 String JsonRPC::init()
 {
     String response;
+    /***
+     * Open preferences for RPC module
+     ***/
     preferences.begin(RPC__PRE_DIR, false);
+    /**
+     * Check if config is available
+     ****/
     isConfigured = preferences.getBool(RPC__PRE_KEY_IS_CONFIGURED, false);
+    /***
+     * In case of none valid/reset configuration
+     * call enterConfig function
+     *****/
     if (!isConfigured)
     {
         Serial.println("RPC INF No valid config found");
         M5.Lcd.print("Config failed, check serial\r\n");
+        /**
+         * After sucessfull config the GUI Json is request from server and returned
+         ***/
         response=enterConfig();
     }
     else
     {
+        /**
+         * valid config found, read the config
+         * ***/
         preferences.getString(RPC__PRE_KEY_HOST, host, RPC__HOST_LENGTH);
         preferences.getString(RPC__PRE_KEY_USER, user, RPC__USER_LENGTH);
         preferences.getString(RPC__PRE_KEY_PWD, password, RPC__PWD_LENGTH);
         cId = preferences.getUInt(RPC__PRE_KEY_CONFIG_ID, 0);
+        /***
+         * Try to read gui config from Symcon Server
+         ****/
         response = execute_string("GetValue", String(cId));
         if(lastStatus)
         {
@@ -41,15 +70,27 @@ String JsonRPC::init()
         }
     }
     preferences.end();
+    /**
+     *return String with GUI config json
+     ***/
     return(response);
 }
 
+/**
+ * Function to configure:
+ * - Symcon Server
+ * - User
+ * - Password
+ * - ID of variable where the JSON GUI Config is stored
+ ***/
 String JsonRPC::enterConfig()
 {
     String response;
+    /** Set timeout too a long time**/
     Serial.setTimeout(200000);
     while (1)
     {
+        /** Request parameter from user via Serial Interface, no echo*/
         Serial.println(F("RPC 001 Enter Symcon Host(full URL to API):"));
         String hostStr = Serial.readStringUntil('\n');
         hostStr.trim();
@@ -74,7 +115,14 @@ String JsonRPC::enterConfig()
         cId=cidStr.toInt();
         Serial.println(cId);
 
-         response = execute_string("GetValue", String(cId));
+        /**
+         * Test parameters and request config
+         **/
+        response = execute_string("GetValue", String(cId));
+        /**
+         * Last request/Get config was succesfull
+         * Store parameters in nv memory
+         ***/
         if(lastStatus)
         {
             Serial.println("RPC INF Config:"+response);
@@ -91,16 +139,21 @@ String JsonRPC::enterConfig()
         }
         
     }
-  
+    /** return Json config string**/
     return(response);
 }
-
+/**
+ * Reset Config, enable reconfig
+ ***/
 void JsonRPC::resetConfig()
 {
     preferences.begin(RPC__PRE_DIR, false);
     preferences.clear();
 }
 
+/***
+ * Base function to send request to symcon rpc api
+ ***/
 bool JsonRPC::execute(String method, String parameters)
 {
     bool retVal = true;
@@ -125,11 +178,17 @@ bool JsonRPC::execute(String method, String parameters)
     lastStatus=retVal;
     return (retVal);
 }
+/**
+ * Function returns the status of last request
+ ****/
 bool JsonRPC::checkStatus()
 {
     return(lastStatus);
 }
 
+/**
+ * Execute RPC Call with return value String (also JSON)
+ **/
 String JsonRPC::execute_string(String method, String parameters)
 {
     String retVal = "";
@@ -164,7 +223,9 @@ String JsonRPC::execute_string(String method, String parameters)
 
     return (retVal);
 }
-
+/**
+ * Execute RPC Call with return value int
+ **/
 uint32_t JsonRPC::execute_int(String method, String parameters)
 {
      uint32_t retVal = 0;
@@ -199,6 +260,10 @@ uint32_t JsonRPC::execute_int(String method, String parameters)
 
     return (retVal);
 }
+
+/**
+ * Execute RPC Call with return value float
+ **/
 double JsonRPC::execute_float(String method, String parameters)
 {
      double retVal = 0.0;
@@ -233,6 +298,9 @@ double JsonRPC::execute_float(String method, String parameters)
 
     return (retVal);
 }
+/**
+ * Execute RPC Call with return value boolean
+ ***/
 bool JsonRPC::execute_boolean(String method, String parameters)
 {
      bool retVal = false;

@@ -16,7 +16,6 @@ static bool t2 = false;
 static bool t3 = false;
 static uint32_t lastActive = 0;
 static bool forceDownload = false;
-static bool checkSleep = false;
 static uint32_t sleepTimeout = SLEEP_TIMEOUT_LONG;
 static String imgServer = "";
 static uint32_t confVers = 0;
@@ -35,9 +34,15 @@ void GUI_Init()
         return;
     }
     Serial.println(F("GUI INF JSON Config loaded"));
+    /**
+     * Get some basic stuff as image server and timeout for sleep from config
+     ***/
     imgServer = doc["imagesrv"].as<String>();
     confVers = doc["version"].as<uint32_t>();
     sleepTimeout = doc["sleepTimeout"].as<uint32_t>();
+    /**
+     * Try to get last config version to check if image files should be re-downloaded
+     * **/
     GUI__preferences.begin("GUI", true);
     uint32_t lastVersion = GUI__preferences.getUInt("CONFVER", 0);
     GUI__preferences.end();
@@ -46,13 +51,18 @@ void GUI_Init()
         Serial.printf("GUI INF New config version found refreshing images old:%d, new:%d\r\n",lastVersion,confVers);
         forceDownload = true;
     }
+    /**
+     * Iterate through elements in config file
+     ***/
     uint32_t elCount = doc["elements"].size();
     Serial.printf("M2I INF Number of Config Elemenets:%d\r\n", elCount);
     uint32_t x;
     for (x = 0; x < elCount; x++)
     {
+        // Check type
         String type = doc["elements"][x]["type"].as<String>();
         Serial.printf("M2I Config Type: %s\r\n", type.c_str());
+        // Typpe is slider page
         if (type == "SLI")
         {
             Serial.printf("GUI INF SLI Config: %s %s %s\r\n", doc["elements"][x]["image1"].as<String>().c_str(), doc["elements"][x]["id"].as<String>().c_str(), doc["elements"][x]["factor"].as<String>().c_str());
@@ -60,6 +70,7 @@ void GUI_Init()
 
             pageCount++;
         }
+        // Type is 4 Button Page
         else if (type == "BT4")
         {
             Serial.printf("GUI INF B4T Config: %s \r\n", doc["elements"][x]["head"].as<String>().c_str());
@@ -67,6 +78,11 @@ void GUI_Init()
             pageCount++;
         }
     }
+    /**
+     * If new version was detected
+     * Save the new version number in the nv memory.
+     * As the page constructors are downloading the images the force download flag can be restetted
+     ****/
     if (forceDownload)
     {
 
@@ -75,16 +91,27 @@ void GUI_Init()
         GUI__preferences.putUInt("CONFVER", confVers);
         GUI__preferences.end();
     }
+    /***
+     * Activate page 0 and render header
+     **/
     pages[currentPage]->activate();
     GUI__header(pages[currentPage]->getHeader().c_str());
 }
 
 void GUI_Loop()
 {
+    /**
+     * Checks if any button was pushed and changes the selected page (right/left) 
+     * or sends the middle button to the page. Returns true if any touch was detected
+     * used to reset the sleep timer. The sleeptimer fill overflow after 50 days
+     ***/
     if (GUI__checkButtons())
     {
         lastActive = millis();
     }
+    /**
+     * Sleep timeout detected-->Goto light sleep and switch off not needed stuff.
+     ***/
     if ((millis() - lastActive) > sleepTimeout)
     {
         Serial.println("GUI INF Timeout reached going to sleep");
@@ -111,6 +138,11 @@ void GUI_Loop()
         // Disable external 5V / enable internal 5V boost
         //AxpSetBusPowerMode(0);
         Serial.println("GUI INF Check WIFI Connection");
+        /***
+         * Re-Connect Wifi
+         * Without reconnect it seems to be a bit random if
+         * autoreconnect is working.
+         ****/
         if(WIF_waitForReconnect())
         {
             Serial.println("GUI INF Wifi Connection established");
@@ -119,14 +151,19 @@ void GUI_Loop()
         {
             Serial.println("GUI ERR Wifi Connection failed");
         }
+        /**
+         * Finally switch the display on
+         * and reset the wakeup timer
+         * ****/
         M5.Lcd.wakeup();
         lastActive = millis();
-        checkSleep = true;
     }
 
     pages[currentPage]->handleInput();
 }
-
+/**
+ * Header Render function
+ * */
 void GUI__header(const char *string)
 {
     M5.Lcd.setTextSize(1);
@@ -136,6 +173,9 @@ void GUI__header(const char *string)
     M5.Lcd.drawString(string, 160, 3, 4);
 }
 
+/**
+ * Write helper function for 1 Wire registers
+ ***/
 void GUI__WriteNByte(uint8_t addr, uint8_t reg, uint8_t num, uint8_t *data)
 {
     Wire1.beginTransmission(addr);
@@ -144,6 +184,11 @@ void GUI__WriteNByte(uint8_t addr, uint8_t reg, uint8_t num, uint8_t *data)
     Wire1.endTransmission();
 }
 
+/**
+ * Function to set touch controller power mode
+ * Options are  CST_POWER_MODE_ACTIVE
+ *              CST_POWER_MODE_MONITOR
+ ***/
 void GUI_TouchSetPowerMode(uint8_t mode)
 {
     uint8_t data;
@@ -153,6 +198,9 @@ void GUI_TouchSetPowerMode(uint8_t mode)
     GUI__WriteNByte(I2C_ADDR_TOUCH, 0xA5, 1, &data);
 }
 
+/**
+ * Simple helper function to check if a touch is detected in a specific area
+ * **/
 bool GUI__isInArea(int xT, int yT, int x, int y, int sizeX, int sizeY)
 {
     bool retVal = false;
@@ -162,7 +210,10 @@ bool GUI__isInArea(int xT, int yT, int x, int y, int sizeX, int sizeY)
     }
     return (retVal);
 }
-
+/**
+ * Function to check the state of the 3 virtual touch buttons
+ * returns true if any touch is detected.
+ * **/ 
 bool GUI__checkButtons()
 {
     bool touchActive = false;
@@ -250,6 +301,10 @@ bool GUI__checkButtons()
     return (touchActive);
 }
 
+/**
+ * Function checks if image is available and updtodate
+ * if not it will download the image file from imgServer
+ ***/
 bool GUI_CheckImage(String path)
 {
     bool retVal = true;

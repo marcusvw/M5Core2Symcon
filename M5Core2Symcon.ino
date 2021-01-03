@@ -22,8 +22,8 @@ void setup()
   M5.Lcd.print("Booting\r\n");
   Serial.setTimeout(2000);
   Serial.flush();
-  //struct	rst_info	*rtc_info=system_get_rst_info();
-
+  
+  /** Reset on request the config of the modules below**/
   Serial.println("Reset?(y)");
   String res = Serial.readString();
   res.trim();
@@ -34,14 +34,16 @@ void setup()
     JsonRPC::resetConfig();
   }
 
-  /**Init Serial**/
+  /**Init WIFI**/
   WIF_init();
+  /**Init GUI**/
   GUI_Init();
   delay(100);
 }
 
 void loop()
 {
+  /** GUI Loop does all the job in regards to Pages/Touch etc.**/
   GUI_Loop();
   
 }

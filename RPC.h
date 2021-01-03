@@ -12,9 +12,11 @@
 #define RPC__PRE_KEY_USER "USER"
 #define RPC__PRE_KEY_PWD "PWD"
 #define RPC__PRE_KEY_CONFIG_ID "CID"
+/**
+ * JsonRPC Class for connectio to Symcon
+ ****/
 class JsonRPC
 {
-   
     public:
     static String execute_string(String method, String parameters);
     static uint32_t execute_int(String method, String parameters);

@@ -21,13 +21,19 @@
 static char WIF__wifiSSID[WIF__SSID_BUFFER_SIZE];
 static char WIF__wifiPSK[WIF__PSK_BUFFER_SIZE];
 Preferences WIF__preferences;
-
+/**
+ * Clear Config for reconfiguration
+ ***/
 void WIF_resetConfig()
 {
     WIF__preferences.begin(WIF_PRE_DIR, false);
     WIF__preferences.clear();
     WIF__preferences.end();
 }
+
+/***
+ * Init WIFI
+ ***/
 void WIF_init()
 {
     bool isConfigured;
@@ -35,16 +41,19 @@ void WIF_init()
     /*Open Prereferences memory in read/write mode*/
     WIF__preferences.begin(WIF_PRE_DIR, false);
     isConfigured = WIF__preferences.getBool(WIF_PRE_KEY_IS_CONFIGURED, false);
+    /** If not configured, request config via serial from user*/
     if (!isConfigured)
     {
         Serial.println("WIF INF No valid config found");
         M5.Lcd.print("Config failed, check serial\r\n");
         WIF__enterConfig();
     }
+    /**Config valid, load it from NV Memory**/
     else
     {
         WIF__preferences.getString(WIF_PRE_KEY_PSK, WIF__wifiPSK, WIF__PSK_BUFFER_SIZE);
         WIF__preferences.getString(WIF_PRE_KEY_SSID, WIF__wifiSSID, WIF__SSID_BUFFER_SIZE);
+        /**Try connection**/
         if (WIF__connectWifi())
         {
             Serial.println(F("WIF INF WIFI Succesfully Connected"));
@@ -59,6 +68,10 @@ void WIF_init()
         }
     }
 }
+
+/**
+ * Request Configuration from user (serial)
+ **/
 void WIF__enterConfig()
 {
     Serial.setTimeout(200000);
@@ -69,6 +82,9 @@ void WIF__enterConfig()
     WIF__preferences.putBool(WIF_PRE_KEY_IS_CONFIGURED, true);
 }
 
+/**
+ * Get PSK from user and try to connect
+ ***/
 void WIF__getPSK()
 {
     while (1)
@@ -78,6 +94,7 @@ void WIF__getPSK()
         psk.trim();
         psk.toCharArray(WIF__wifiPSK, WIF__PSK_BUFFER_SIZE);
         Serial.println(psk);
+        /** Only leave function in case of sucesfull connection**/
         if (WIF__connectWifi())
         {
             Serial.println(F("WIF COK WIFI Succesfully Connected"));
@@ -92,11 +109,16 @@ void WIF__getPSK()
     }
 }
 
+/**
+ * Connects to WIFI
+ ***/
 bool WIF__connectWifi()
 {
     bool retVal = true;
     uint64_t startTime = millis();
+    /** Start WIFI with SSID and PSK**/
     WiFi.begin(WIF__wifiSSID, WIF__wifiPSK);
+    /**Check if wifi connection can be established before timeout**/
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
@@ -109,6 +131,9 @@ bool WIF__connectWifi()
     }
     return (retVal);
 }
+/**
+ * Force reconnect after light sleep
+ ***/
 bool WIF_waitForReconnect()
 {
     bool retVal = true;
@@ -127,6 +152,9 @@ bool WIF_waitForReconnect()
     return (retVal);
 }
 
+/***
+ * Function to select SSID through serial
+ ***/
 void WIF__scanWifiNetworks()
 {
     String ssidsArray[50];

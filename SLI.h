@@ -3,6 +3,9 @@
 #include <M5Core2.h>
 #include "RPC.h"
 #include <ArduinoJson.h>
+/**
+ * Slider Page implementation
+ ***/
 class SliderPage : public Page
 {
 private:
