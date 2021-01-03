@@ -58,4 +58,8 @@ Parameters to be set/follow the questions...
 WIFI: SSID and PSK
 RPC: Symcon Server IP, User, Password and ID of varaible holding the config from above.
 
+## TODO:
+- Add option in SLI for pure vaiables
+- Create a page to display stuff
+
 
