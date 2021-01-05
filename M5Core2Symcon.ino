@@ -1,13 +1,10 @@
 #include <M5Core2.h>
-#include "WIF.h"
+#include "src/wif/WIF.h"
 #include <Preferences.h>
-#include "SLI.h"
+#include "src/gui/GUI.h"
 #include <ArduinoJson.h>
-#include "RPC.h"
-#include "GUI.h"
+#include "src/rpc/RPC.h"
 Preferences preferences;
-SliderPage *sp[10];
-uint32_t pages=0;
 void setup()
 {
 

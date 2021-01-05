@@ -1,13 +1,14 @@
-#include "PAG.h"
-#include "RPC.h"
-#include "SLI.h"
+#include "PAG/PAG.h"
+#include "../rpc/RPC.h"
+#include "../ddh/DDH.h"
+#include "SLI/SLI.h"
 #include <ArduinoJson.h>
 #include "GUI.h"
 #include <HTTPClient.h>
 #include <M5Core2.h>
 #include <Preferences.h>
-#include "WIF.h"
-#include "BT4.h"
+#include "../wif/WIF.h"
+#include "BT4/BT4.h"
 static Page *pages[50];
 static uint8_t pageCount = 0;
 static uint8_t currentPage = 0;
@@ -19,13 +20,19 @@ static bool forceDownload = false;
 static uint32_t sleepTimeout = SLEEP_TIMEOUT_LONG;
 static String imgServer = "";
 static uint32_t confVers = 0;
+static PAG_pos_t staticPosition={0,0};
 Preferences GUI__preferences;
 void GUI_Init()
 {
+    String hostname;
+    bool useSDCard=false;
     String config = JsonRPC::init();
     DynamicJsonDocument doc(20000);
     DeserializationError error = deserializeJson(doc, config);
-
+     for (uint32_t x; x < NUM_PAGES_MAX; x++)
+    {
+        pages[x] = NULL;
+    }
     // Test if parsing succeeds.
     if (error)
     {
@@ -39,7 +46,9 @@ void GUI_Init()
      ***/
     imgServer = doc["imagesrv"].as<String>();
     confVers = doc["version"].as<uint32_t>();
+    hostname = doc["hostname"].as<String>();
     sleepTimeout = doc["sleepTimeout"].as<uint32_t>();
+    useSDCard =doc["useSDCard"].as<boolean>();
     /**
      * Try to get last config version to check if image files should be re-downloaded
      * **/
@@ -51,6 +60,21 @@ void GUI_Init()
         Serial.printf("GUI INF New config version found refreshing images old:%d, new:%d\r\n",lastVersion,confVers);
         forceDownload = true;
     }
+      /**
+     * If new version was detected
+     * Save the new version number in the nv memory.
+     * As the page constructors are downloading the images the force download flag can be restetted
+     ****/
+    if (forceDownload)
+    {
+
+        forceDownload = false;
+        GUI__preferences.begin("GUI", false);
+        GUI__preferences.putUInt("CONFVER", confVers);
+        GUI__preferences.end();
+    }
+    DDH_Init(imgServer,forceDownload, useSDCard, 0, hostname);
+    WiFi.setHostname(hostname.c_str());
     /**
      * Iterate through elements in config file
      ***/
@@ -66,7 +90,7 @@ void GUI_Init()
         if (type == "SLI")
         {
             Serial.printf("GUI INF SLI Config: %s %s %s\r\n", doc["elements"][x]["image1"].as<String>().c_str(), doc["elements"][x]["id"].as<String>().c_str(), doc["elements"][x]["factor"].as<String>().c_str());
-            pages[pageCount] = new SliderPage((JsonObject)(doc["elements"][x]));
+            pages[pageCount] = new SliderPage((JsonObject)(doc["elements"][x]), staticPosition,useSDCard);
 
             pageCount++;
         }
@@ -74,28 +98,15 @@ void GUI_Init()
         else if (type == "BT4")
         {
             Serial.printf("GUI INF B4T Config: %s \r\n", doc["elements"][x]["head"].as<String>().c_str());
-            pages[pageCount] = new Button4Page((JsonObject)(doc["elements"][x]));
+            pages[pageCount] = new Button4Page((JsonObject)(doc["elements"][x]), staticPosition,useSDCard);
             pageCount++;
         }
     }
-    /**
-     * If new version was detected
-     * Save the new version number in the nv memory.
-     * As the page constructors are downloading the images the force download flag can be restetted
-     ****/
-    if (forceDownload)
-    {
-
-        forceDownload = false;
-        GUI__preferences.begin("GUI", false);
-        GUI__preferences.putUInt("CONFVER", confVers);
-        GUI__preferences.end();
-    }
+  
     /***
      * Activate page 0 and render header
      **/
     pages[currentPage]->activate();
-    GUI__header(pages[currentPage]->getHeader().c_str());
 }
 
 void GUI_Loop()
@@ -158,20 +169,11 @@ void GUI_Loop()
         M5.Lcd.wakeup();
         lastActive = millis();
     }
+    DDH__Loop();
 
-    pages[currentPage]->handleInput();
+    
 }
-/**
- * Header Render function
- * */
-void GUI__header(const char *string)
-{
-    M5.Lcd.setTextSize(1);
-    M5.Lcd.fillRect(3, 4, 316, 20, BLACK);
-    M5.Lcd.setTextColor(TFT_WHITE);
-    M5.Lcd.setTextDatum(TC_DATUM);
-    M5.Lcd.drawString(string, 160, 3, 4);
-}
+
 
 /**
  * Write helper function for 1 Wire registers
@@ -217,7 +219,11 @@ bool GUI__isInArea(int xT, int yT, int x, int y, int sizeX, int sizeY)
 bool GUI__checkButtons()
 {
     bool touchActive = false;
-    TouchPoint_t pos = M5.Touch.getPressPoint();
+    TouchPoint_t posT = M5.Touch.getPressPoint();
+    PAG_pos_t pos;
+    pos.x=posT.x;
+    pos.y=posT.y;
+    pages[currentPage]->handleInput(pos);
     touchActive = (pos.x != -1);
     if (touchActive)
     {
@@ -239,7 +245,6 @@ bool GUI__checkButtons()
                 }
                 Serial.printf("GUI INF T1 Pos x %d, Pos y %d , Page: %d\r\n", pos.x, pos.y, currentPage);
                 pages[currentPage]->activate();
-                GUI__header(pages[currentPage]->getHeader().c_str());
             }
         }
         else
@@ -280,7 +285,6 @@ bool GUI__checkButtons()
                 }
                 Serial.printf("GUI INF T3 Pos x %d, Pos y %d , Page: %d\r\n", pos.x, pos.y, currentPage);
                 pages[currentPage]->activate();
-                GUI__header(pages[currentPage]->getHeader().c_str());
             }
         }
         else
@@ -307,34 +311,5 @@ bool GUI__checkButtons()
  ***/
 bool GUI_CheckImage(String path)
 {
-    bool retVal = true;
-    if ((!SD.exists(path)) || (forceDownload))
-    {
-        if (SD.exists(path))
-        {
-            SD.remove(path);
-        }
-        M5.Lcd.print("Downloading Image\r\n");
-        Serial.printf("GUI INF File: %s not found, downloading from %s", path.c_str(), imgServer.c_str());
-        File file = SD.open(path, "a");
-        HTTPClient http;
-
-        http.begin(imgServer + path); //Specify the URL and certificate
-        int httpCode = http.GET();    //Make the request
-
-        if (httpCode == HTTP_CODE_OK)
-        { //Check for the returning code
-            http.writeToStream(&file);
-        }
-        else
-        {
-            retVal = false;
-            Serial.printf("GUI ERR File: %s failed to download", path.c_str());
-            M5.Lcd.print("Downloading Image failed\r\n");
-        }
-
-        file.close();
-        Serial.printf("GUI INF File: %s downloaded and stored", path.c_str());
-        http.end(); //Free the resources
-    }
+    return(DDH_CheckImage(path));
 }

@@ -1,0 +1,18 @@
+[submodule "src/ddh"]
+	path = src/ddh
+	url = git@github.com:marcusvw/ArdDDH
+[submodule "src/rpc"]
+	path = src/rpc
+	url = git@github.com:marcusvw/ArdSymconRPCHelper
+[submodule "src/wif"]
+	path = src/wif
+	url = git@github.com:marcusvw/ArdWifiHelper
+[submodule "src/gui/SLI"]
+	path = src/gui/SLI
+	url = git@github.com:marcusvw/GUISLI
+[submodule "src/gui/BT4"]
+	path = src/gui/BT4
+	url = git@github.com:marcusvw/GUIBT4
+[submodule "src/gui/PAG"]
+	path = src/gui/PAG
+	url = git@github.com:marcusvw/GUIPAG
