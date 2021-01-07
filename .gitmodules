@@ -16,3 +16,6 @@
 [submodule "src/gui/PAG"]
 	path = src/gui/PAG
 	url = git@github.com:marcusvw/GUIPAG
+[submodule "src/gui/DIS"]
+	path = src/gui/DIS
+	url = git@github.com:marcusvw/GUIDIS.git
