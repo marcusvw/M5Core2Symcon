@@ -41,6 +41,15 @@
         "/offKitchen.bmp"
       ],
       "varOnly": [false, true, false, false]
+    },
+    {
+      "type": "DIS",
+      "head": "Messwerte",
+      "ids": ["50745", "40435", "13456", "24841"],
+      "images": ["/ds_temp.bmp", "/ds_hum.bmp", "/ds_lux.bmp", "/ds_in.bmp"],
+      "label" :["Wohnzimmer Temp","Wz Hum", "Wz Helligkeit","Küche Temp"],
+      "format":["%2.2fC","%2.2f%%","%3.1flux","%2.2fC"],
+      "types":[0,0,0,0]
     }
   ]
 }

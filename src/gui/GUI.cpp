@@ -9,6 +9,7 @@
 #include <Preferences.h>
 #include "../wif/WIF.h"
 #include "BT4/BT4.h"
+#include "DIS/DIS.h"
 static Page *pages[50];
 static uint8_t pageCount = 0;
 static uint8_t currentPage = 0;
@@ -99,6 +100,12 @@ void GUI_Init()
         {
             Serial.printf("GUI INF B4T Config: %s \r\n", doc["elements"][x]["head"].as<String>().c_str());
             pages[pageCount] = new Button4Page((JsonObject)(doc["elements"][x]), staticPosition,useSDCard);
+            pageCount++;
+        }
+         else if (type == "DIS")
+        {
+            Serial.printf("GUI INF DIS Config: %s \r\n", doc["elements"][x]["head"].as<String>().c_str());
+            pages[pageCount] = new DisplayPage((JsonObject)(doc["elements"][x]), staticPosition,useSDCard);
             pageCount++;
         }
     }
